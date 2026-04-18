@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SiteAssist v3</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f1117; --paper: #f5f3ef; --card: #fff;
+    --accent: #c8552a; --accent2: #2a6fc8; --accent3: #2a8c4a;
+    --sheet: #1a7340; --muted: #8a8880; --border: #ddd9d2;
+    --yellow: #f5c842; --tag-bg: #f0ece5;
+    --radius: 10px; --shadow: 0 2px 12px rgba(15,17,23,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', sans-serif; background: var(--paper); color: var(--ink); font-size: 15px; line-height: 1.6; }
+
+  header { background: var(--ink); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 3px solid var(--accent); }
+  .logo { font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; color: var(--yellow); }
+  .logo span { color: #fff; }
+  .header-sub { font-size: 12px; color: #aaa; margin-left: auto; }
+
+  .nav-scroll { overflow-x: auto; background: var(--ink); padding: 0 16px 12px; display: flex; gap: 6px; scrollbar-width: none; }
+  .nav-scroll::-webkit-scrollbar { display: none; }
+  .tab-btn { flex-shrink: 0; display: flex; align-items: center; gap: 6px; background: transparent; border: 1.5px solid #444; color: #aaa; border-radius: 20px; padding: 5px 14px; font-family: 'Sarabun', sans-serif; font-size: 13px; cursor: pointer; transition: all .2s; white-space: nowrap; }
+  .tab-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .tab-btn:hover:not(.active) { border-color: #888; color: #fff; }
+  .tag-code { font-family: 'IBM Plex Mono', monospace; font-size: 10px; background: rgba(255,255,255,.15); padding: 1px 5px; border-radius: 4px; }
+
+  main { padding: 16px; max-width: 640px; margin: 0 auto; }
+  .panel { display: none; animation: fadeIn .25s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
+
+  .hero { background: var(--card); border-radius: var(--radius); padding: 20px; margin-bottom: 14px; box-shadow: var(--shadow); border-left: 4px solid var(--accent); display: flex; gap: 14px; align-items: flex-start; }
+  .hero-icon { font-size: 32px; flex-shrink: 0; }
+  .hero h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .hero p { font-size: 13px; color: var(--muted); }
+
+  /* Sheet banner */
+  .sheet-banner { background: linear-gradient(135deg,#e8f5ee,#d4edda); border: 1.5px solid #a8d5b8; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+  .sheet-banner-body { flex: 1; }
+  .sheet-banner-title { font-size: 13px; font-weight: 700; color: var(--sheet); }
+  .sheet-banner-sub { font-size: 11px; color: #2d6a4f; }
+  .sheet-status { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; flex-shrink: 0; }
+  .dot.green { background: #2a8c4a; }
+  .setup-btn { margin-left: auto; font-size: 12px; background: none; border: 1px solid #a8d5b8; border-radius: 6px; padding: 3px 10px; cursor: pointer; color: var(--sheet); font-family: 'Sarabun', sans-serif; }
+
+  .upload-zone { border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 16px; text-align: center; cursor: pointer; transition: all .2s; background: var(--card); margin-bottom: 14px; }
+  .upload-zone:hover { border-color: var(--accent); background: #fff5f2; }
+  .upload-zone .u-icon { font-size: 28px; margin-bottom: 8px; }
+  .upload-zone p { font-size: 13px; color: var(--muted); }
+  .upload-zone strong { color: var(--ink); }
+  #fileInput { display: none; }
+  .img-preview { width: 100%; max-height: 180px; object-fit: contain; border-radius: 6px; margin-bottom: 10px; display: none; }
+
+  .action-btn { width: 100%; background: var(--accent); color: #fff; border: none; border-radius: var(--radius); padding: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; transition: all .2s; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 14px; }
+  .action-btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+  .action-btn.loading { opacity: .65; pointer-events: none; }
+  .action-btn.blue { background: var(--accent2); }
+  .action-btn.green { background: var(--accent3); }
+
+  .result-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px; }
+  .result-header { background: var(--ink); color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .result-body { padding: 16px; font-size: 14px; line-height: 1.8; white-space: pre-wrap; }
+  .copy-btn { margin-left: auto; background: rgba(255,255,255,.15); border: none; border-radius: 6px; padding: 4px 10px; font-size: 12px; cursor: pointer; color: #fff; }
+
+  /* Parsed form */
+  .form-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px; }
+  .form-card-header { background: var(--sheet); color: #fff; padding: 10px 16px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .form-body { padding: 14px; }
+  .form-group { margin-bottom: 10px; }
+  .form-group label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; }
+  .form-group input, .form-group textarea, .form-group select {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-family: 'Sarabun', sans-serif; font-size: 14px;
+    outline: none; color: var(--ink); background: var(--paper);
+  }
+  .form-group input:focus, .form-group textarea:focus { border-color: var(--sheet); }
+  .form-group textarea { resize: none; min-height: 60px; }
+  .form-row { display: flex; gap: 8px; }
+  .form-row .form-group { flex: 1; }
+
+  /* Items table */
+  .items-section { margin-bottom: 12px; }
+  .items-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+  .item-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .item-row input { border: 1.5px solid var(--border); border-radius: 6px; padding: 7px 10px; font-family: 'Sarabun', sans-serif; font-size: 13px; outline: none; color: var(--ink); background: var(--paper); }
+  .item-desc { flex: 3; }
+  .item-qty  { flex: 1; }
+  .item-unit { flex: 1; }
+  .item-price{ flex: 1.5; }
+  .item-del  { background: none; border: none; font-size: 16px; cursor: pointer; color: #c0392b; padding: 0 4px; }
+  .add-item-btn { background: none; border: 1.5px dashed var(--border); border-radius: 8px; padding: 7px 12px; font-family: 'Sarabun', sans-serif; font-size: 13px; cursor: pointer; color: var(--muted); width: 100%; margin-bottom: 10px; }
+  .add-item-btn:hover { border-color: var(--sheet); color: var(--sheet); }
+
+  /* Totals */
+  .totals-box { background: var(--tag-bg); border-radius: 8px; padding: 10px 14px; margin-bottom: 12px; }
+  .total-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; }
+  .total-row.grand { font-weight: 700; font-size: 15px; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 4px; }
+
+  /* Save bar */
+  .save-bar { background: #eafaf1; border: 1.5px solid #a8d5b8; border-radius: var(--radius); padding: 14px; display: flex; align-items: center; gap: 12px; }
+  .save-bar-text { flex: 1; }
+  .save-bar-title { font-weight: 700; color: var(--sheet); font-size: 14px; }
+  .save-bar-sub { font-size: 12px; color: #2d6a4f; }
+  .save-btn { background: var(--sheet); color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-family: 'Sarabun', sans-serif; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .save-btn:hover { background: #145c32; }
+  .save-btn:disabled { opacity: .6; pointer-events: none; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; display: none; align-items: flex-end; }
+  .modal-overlay.open { display: flex; }
+  .modal-sheet { background: var(--card); border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 640px; margin: 0 auto; animation: slideUp .3s cubic-bezier(.34,1.2,.64,1); }
+  @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+  .modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+  .modal-title { font-size: 17px; font-weight: 700; margin-bottom: 16px; }
+  .step { display: flex; gap: 12px; margin-bottom: 14px; }
+  .step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: #fff; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .step-body { flex: 1; font-size: 13px; line-height: 1.6; }
+  .step-body strong { display: block; font-weight: 700; }
+  .step-body code { font-family: 'IBM Plex Mono', monospace; font-size: 11px; background: var(--tag-bg); padding: 2px 6px; border-radius: 4px; }
+  .modal-url-input { width: 100%; border: 1.5px solid var(--border); border-radius: 8px; padding: 11px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; outline: none; color: var(--ink); margin: 12px 0 4px; }
+  .modal-url-input:focus { border-color: var(--sheet); }
+  .modal-save-btn { width: 100%; background: var(--sheet); color: #fff; border: none; border-radius: var(--radius); padding: 14px; font-family: 'Sarabun', sans-serif; font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 12px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--ink); color: #fff; padding: 12px 22px; border-radius: 24px; font-size: 14px; font-weight: 600; transition: transform .3s cubic-bezier(.34,1.56,.64,1); z-index: 999; white-space: nowrap; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { background: var(--sheet); }
+  .toast.error { background: #c0392b; }
+
+  .section-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 8px; }
+  .field-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .field-row input, .field-row select { flex: 1; border: 1.5px solid var(--border); border-radius: 8px; padding: 9px 12px; font-family: 'Sarabun', sans-serif; font-size: 14px; outline: none; background: var(--card); color: var(--ink); }
+  .input-area { background: var(--card); border-radius: var(--radius); border: 1.5px solid var(--border); padding: 12px; margin-bottom: 14px; box-shadow: var(--shadow); }
+  .input-area label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 6px; }
+  .input-area textarea { width: 100%; border: none; outline: none; font-family: 'Sarabun', sans-serif; font-size: 14px; resize: none; min-height: 80px; color: var(--ink); background: transparent; }
+
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="setupModal" onclick="closeModalOutside(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">⚙️ ตั้งค่า Google Sheets</div>
+    <div class="step"><div class="step-num">1</div><div class="step-body"><strong>เปิด Google Sheets → Extensions → Apps Script</strong>วาง code จาก <code>apps-script-v2.gs</code> → Save</div></div>
+    <div class="step"><div class="step-num">2</div><div class="step-body"><strong>Deploy → New deployment → Web app</strong>Execute as = <code>Me</code> · Access = <code>Anyone</code> → Deploy</div></div>
+    <div class="step"><div class="step-num">3</div><div class="step-body"><strong>Copy URL มาวางด้านล่าง</strong>ขึ้นต้นด้วย <code>https://script.google.com/macros/s/…</code></div></div>
+    <input type="text" class="modal-url-input" id="modalUrlInput" placeholder="https://script.google.com/macros/s/AKfycb…/exec" />
+    <div style="font-size:12px;color:var(--muted)">URL เก็บในเครื่องคุณเท่านั้น</div>
+    <button class="modal-save-btn" onclick="saveScriptUrl()">💾 บันทึก URL และปิด</button>
+  </div>
+</div>
+
+<header>
+  <div class="logo">Site<span>Assist</span></div>
+  <div class="header-sub">AI + Google Sheets · v3</div>
+</header>
+
+<div class="nav-scroll">
+  <button class="tab-btn active" onclick="switchTab('receipt')" id="tab-receipt">🧾 Expenses <span class="tag-code">#Receipt</span></button>
+  <button class="tab-btn" onclick="switchTab('po')" id="tab-po">📦 Purchasing <span class="tag-code">#Order</span></button>
+  <button class="tab-btn" onclick="switchTab('labor')" id="tab-labor">👷 Labor <span class="tag-code">#Labor</span></button>
+  <button class="tab-btn" onclick="switchTab('material')" id="tab-material">📐 Estimation <span class="tag-code">#Material</span></button>
+  <button class="tab-btn" onclick="switchTab('billing')" id="tab-billing">💳 Finance <span class="tag-code">#Billing</span></button>
+  <button class="tab-btn" onclick="switchTab('alien')" id="tab-alien">🛂 HR <span class="tag-code">#Alien</span></button>
+</div>
+
+<main>
+
+<!-- ══ RECEIPT ══ -->
+<div class="panel active" id="panel-receipt">
+  <div class="hero">
+    <div class="hero-icon">🧾</div>
+    <div>
+      <h2>อ่านใบเสร็จ → บันทึก Google Sheets</h2>
+      <p>AI สกัดข้อมูลครบทุกฟิลด์ · แก้ไขได้ · บันทึกลง Sheet พร้อมรายการสินค้าแต่ละบรรทัด</p>
+    </div>
+  </div>
+
+  <div class="sheet-banner">
+    <div style="font-size:22px">📊</div>
+    <div class="sheet-banner-body">
+      <div class="sheet-banner-title">Google Sheets</div>
+      <div class="sheet-banner-sub" id="sheetSubText">ยังไม่ได้ตั้งค่า</div>
+      <div class="sheet-status">
+        <div class="dot" id="sheetDot"></div>
+        <span id="sheetStatusLabel" style="font-size:12px;color:var(--muted)">ไม่ได้เชื่อมต่อ</span>
+        <button class="setup-btn" onclick="openSetupModal()">⚙️ ตั้งค่า</button>
+      </div>
+    </div>
+  </div>
+
+  <input type="file" id="fileInput" accept="image/*">
+  <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+    <div class="u-icon">📷</div>
+    <p><strong>แตะเพื่ออัปโหลดรูปใบเสร็จ</strong></p>
+    <p>รองรับ JPG, PNG, HEIC</p>
+  </div>
+  <img id="preview1" class="img-preview" />
+
+  <div class="section-label">หมวด BOQ (แนะนำ)</div>
+  <div class="field-row">
+    <input type="text" id="boqHint" placeholder="เช่น งานเหล็ก, งานไฟฟ้า, งานคอนกรีต…" />
+  </div>
+
+  <button class="action-btn" id="btnReceipt" onclick="runReceipt()">🔍 วิเคราะห์ใบเสร็จ</button>
+
+  <div class="result-card" id="aiResultCard" style="display:none">
+    <div class="result-header">🤖 ผล AI <button class="copy-btn" onclick="copyResult('aiResultText')">คัดลอก</button></div>
+    <div class="result-body" id="aiResultText"></div>
+  </div>
+
+  <!-- ── PARSED FORM ── -->
+  <div class="form-card" id="parsedForm" style="display:none">
+    <div class="form-card-header">📋 ข้อมูลที่จะบันทึกลง Google Sheets</div>
+    <div class="form-body">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>เลขที่ใบกำกับ</label>
+          <input type="text" id="fInvoiceNo" placeholder="IV6900190" />
+        </div>
+        <div class="form-group">
+          <label>วันที่ในบิล</label>
+          <input type="text" id="fDate" placeholder="11/03/2569" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ชื่อร้าน / Vendor</label>
+        <input type="text" id="fVendor" placeholder="ห้างหุ้นส่วนจำกัด พรโลหะภัณฑ์…" />
+      </div>
+
+      <div class="form-group">
+        <label>ที่อยู่ร้าน</label>
+        <input type="text" id="fVendorAddr" placeholder="22 ถ.ราษฎรีนดี ต.หาดใหญ่…" />
+      </div>
+
+      <div class="form-group">
+        <label>ลูกค้า / บริษัทของเรา</label>
+        <input type="text" id="fCustomer" placeholder="หจก. มิตรแสงวิศวกรรม" />
+      </div>
+
+      <!-- Items -->
+      <div class="items-section">
+        <div class="items-label">รายการสินค้า</div>
+        <div style="display:flex;gap:6px;margin-bottom:4px;padding:0 2px">
+          <div style="flex:3;font-size:11px;color:var(--muted)">รายการ</div>
+          <div style="flex:1;font-size:11px;color:var(--muted)">จำนวน</div>
+          <div style="flex:1;font-size:11px;color:var(--muted)">หน่วย</div>
+          <div style="flex:1.5;font-size:11px;color:var(--muted)">ราคา/หน่วย</div>
+          <div style="width:28px"></div>
+        </div>
+        <div id="itemsContainer"></div>
+        <button class="add-item-btn" onclick="addItemRow()">+ เพิ่มรายการ</button>
+      </div>
+
+      <!-- Totals -->
+      <div class="totals-box">
+        <div class="total-row">
+          <span>ยอดก่อน VAT</span>
+          <span>฿ <input type="number" id="fAmtEx" style="border:none;background:transparent;width:90px;text-align:right;font-size:13px;outline:none;font-family:Sarabun,sans-serif;" onchange="recalcTotals()" /></span>
+        </div>
+        <div class="total-row">
+          <span>VAT 7%</span>
+          <span>฿ <input type="number" id="fVAT" style="border:none;background:transparent;width:90px;text-align:right;font-size:13px;outline:none;font-family:Sarabun,sans-serif;" /></span>
+        </div>
+        <div class="total-row grand">
+          <span>ยอดรวมทั้งสิ้น</span>
+          <span id="totalDisplay" style="color:var(--accent)">฿ 0.00</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>หมวด BOQ</label>
+          <select id="fBOQ">
+            <option value="">-- เลือกหมวด --</option>
+            <option>งานดิน</option>
+            <option>งานคอนกรีต</option>
+            <option>งานเหล็ก</option>
+            <option>งานไม้แบบ</option>
+            <option>งานผนัง</option>
+            <option>งานพื้น</option>
+            <option>งานหลังคา</option>
+            <option>งานระบบไฟฟ้า</option>
+            <option>งานระบบประปา</option>
+            <option>งานทาสี</option>
+            <option>งานอื่นๆ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>หมายเหตุ</label>
+        <textarea id="fNote" placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)"></textarea>
+      </div>
+
+      <div class="save-bar">
+        <div style="font-size:26px">📊</div>
+        <div class="save-bar-text">
+          <div class="save-bar-title">บันทึกลง Google Sheets</div>
+          <div class="save-bar-sub">ตรวจสอบข้อมูลด้านบนก่อนกดบันทึก</div>
+        </div>
+        <button class="save-btn" id="btnSave" onclick="saveToSheet()">💾 บันทึก</button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ══ OTHER TABS ══ -->
+<div class="panel" id="panel-po">
+  <div class="hero"><div class="hero-icon">📦</div><div><h2>ร่างใบ PO จาก LINE</h2><p>วางข้อความสั่งของจาก LINE — AI แปลงเป็นร่าง PO พร้อมเช็คงบ</p></div></div>
+  <div class="input-area"><label>ข้อความสั่งซื้อ</label><textarea id="lineText" placeholder="เช่น: ขอสั่งทราย 5 คิว @550 บาท/คิว…"></textarea></div>
+  <div class="field-row"><input type="number" id="budgetTotal" placeholder="งบรวม (฿)" /><input type="number" id="budgetUsed" placeholder="ใช้ไปแล้ว (฿)" /></div>
+  <button class="action-btn blue" id="btnPO" onclick="runPO()">📄 ร่างใบ PO</button>
+  <div class="result-card" id="resultPO" style="display:none"><div class="result-header">📋 ร่างใบ PO<button class="copy-btn" onclick="copyResult('poText')">คัดลอก</button></div><div class="result-body" id="poText"></div></div>
+</div>
+
+<div class="panel" id="panel-labor">
+  <div class="hero"><div class="hero-icon">👷</div><div><h2>บันทึกเวลาคนงาน</h2><p>สรุปวันทำงานแยกรายคนและคำนวณค่าแรง</p></div></div>
+  <div class="input-area"><label>รายการคนงาน</label><textarea id="laborText" placeholder="เช่น: สมชาย มา 1 2 3 5 / สมหญิง ขาด 3…"></textarea></div>
+  <div class="field-row"><input type="number" id="wageRate" placeholder="อัตราค่าแรง (฿/วัน)" /><input type="text" id="laborPeriod" placeholder="ช่วงเวลา เช่น 1-15 ม.ค. 68" /></div>
+  <button class="action-btn green" id="btnLabor" onclick="runLabor()">📊 สรุปค่าแรง</button>
+  <div class="result-card" id="resultLabor" style="display:none"><div class="result-header">👷 สรุปค่าแรง<button class="copy-btn" onclick="copyResult('laborResult')">คัดลอก</button></div><div class="result-body" id="laborResult"></div></div>
+</div>
+
+<div class="panel" id="panel-material">
+  <div class="hero"><div class="hero-icon">📐</div><div><h2>วิเคราะห์แบบ → Material List</h2><p>จัดทำรายการวัสดุเพื่อ Material Approval</p></div></div>
+  <div class="input-area"><label>รายละเอียดแบบ</label><textarea id="materialNote" placeholder="เช่น: พื้น ชั้น 1 ขนาด 500 ตร.ม. ปูกระเบื้อง 60x60…"></textarea></div>
+  <button class="action-btn" id="btnMaterial" onclick="runMaterial()">🔍 วิเคราะห์วัสดุ</button>
+  <div class="result-card" id="resultMaterial" style="display:none"><div class="result-header">📦 รายการวัสดุ<button class="copy-btn" onclick="copyResult('materialResult')">คัดลอก</button></div><div class="result-body" id="materialResult"></div></div>
+</div>
+
+<div class="panel" id="panel-billing">
+  <div class="hero"><div class="hero-icon">💳</div><div><h2>ตรวจสอบใบวางบิล</h2><p>คำนวณ Retention + WHT สุทธิ</p></div></div>
+  <div class="input-area"><label>รายละเอียดบิล</label><textarea id="billingText" placeholder="เช่น: งวด 2 งานโครงสร้างชั้น 2 เสร็จ 100% ยอดเบิก 850,000…"></textarea></div>
+  <div class="field-row"><input type="number" id="retentionRate" placeholder="Retention %" value="5" /><input type="number" id="whtRate" placeholder="WHT %" value="3" /></div>
+  <div class="field-row"><input type="number" id="contractValue" placeholder="มูลค่าสัญญา (฿)" /><input type="text" id="progressClaim" placeholder="% ผลงานจริง" /></div>
+  <button class="action-btn blue" id="btnBilling" onclick="runBilling()">💰 ตรวจสอบยอดเงิน</button>
+  <div class="result-card" id="resultBilling" style="display:none"><div class="result-header">💳 สรุปยอดเงิน<button class="copy-btn" onclick="copyResult('billingResult')">คัดลอก</button></div><div class="result-body" id="billingResult"></div></div>
+</div>
+
+<div class="panel" id="panel-alien">
+  <div class="hero"><div class="hero-icon">🛂</div><div><h2>ติดตาม Visa / Work Permit</h2><p>แจ้งเตือนล่วงหน้า 60 วันก่อนหมดอายุ</p></div></div>
+  <div class="input-area"><label>รายการแรงงาน</label><textarea id="alienText" placeholder="Aung Myat | พม่า | Visa | 15/08/2568&#10;Somchai | ลาว | WP | 30/06/2568"></textarea></div>
+  <button class="action-btn" id="btnAlien" onclick="runAlien()">🔔 ตรวจสอบวันหมดอายุ</button>
+  <div class="result-card" id="resultAlien" style="display:none"><div class="result-header">🛂 สถานะเอกสาร<button class="copy-btn" onclick="copyResult('alienResult')">คัดลอก</button></div><div class="result-body" id="alienResult"></div></div>
+</div>
+
+</main>
+
+<script>
+/* ── Storage ── */
+let scriptUrl = localStorage.getItem('gasScriptUrl') || '';
+updateSheetStatus();
+
+function updateSheetStatus() {
+  const dot = document.getElementById('sheetDot');
+  const lbl = document.getElementById('sheetStatusLabel');
+  const sub = document.getElementById('sheetSubText');
+  if (scriptUrl) {
+    dot.className = 'dot green';
+    lbl.textContent = 'เชื่อมต่อแล้ว';
+    lbl.style.color = 'var(--sheet)';
+    sub.textContent = scriptUrl.substring(0,50) + '…';
+  } else {
+    dot.className = 'dot';
+    lbl.textContent = 'ไม่ได้เชื่อมต่อ — กด ⚙️ ตั้งค่า';
+    lbl.style.color = 'var(--muted)';
+    sub.textContent = 'ยังไม่ได้ตั้งค่า Script URL';
+  }
+}
+
+/* ── Modal ── */
+function openSetupModal() { document.getElementById('modalUrlInput').value = scriptUrl; document.getElementById('setupModal').classList.add('open'); }
+function closeModalOutside(e) { if (e.target.id==='setupModal') document.getElementById('setupModal').classList.remove('open'); }
+function saveScriptUrl() {
+  const v = document.getElementById('modalUrlInput').value.trim();
+  if (!v.startsWith('https://script.google.com/')) { showToast('❌ URL ไม่ถูกต้อง','error'); return; }
+  scriptUrl = v; localStorage.setItem('gasScriptUrl', v);
+  updateSheetStatus(); document.getElementById('setupModal').classList.remove('open');
+  showToast('✅ บันทึก URL สำเร็จ','success');
+}
+
+/* ── Tabs ── */
+function switchTab(n) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.getElementById('tab-'+n).classList.add('active');
+}
+
+/* ── Image preview ── */
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = ev => { const i = document.getElementById('preview1'); i.src = ev.target.result; i.style.display = 'block'; };
+  r.readAsDataURL(f);
+});
+function imageToBase64(file) {
+  return new Promise((res,rej) => { const r=new FileReader(); r.onload=e=>res(e.target.result.split(',')[1]); r.onerror=()=>rej(new Error('Read failed')); r.readAsDataURL(file); });
+}
+
+/* ── Items table ── */
+let itemCount = 0;
+function addItemRow(desc='', qty='', unit='', price='') {
+  itemCount++;
+  const id = itemCount;
+  const div = document.createElement('div');
+  div.className = 'item-row'; div.id = 'item-'+id;
+  div.innerHTML = `
+    <input class="item-desc" type="text" placeholder="รายการสินค้า" value="${desc}" />
+    <input class="item-qty" type="number" placeholder="จำนวน" value="${qty}" />
+    <input class="item-unit" type="text" placeholder="หน่วย" value="${unit}" />
+    <input class="item-price" type="number" placeholder="ราคา" value="${price}" />
+    <button class="item-del" onclick="document.getElementById('item-${id}').remove()">✕</button>
+  `;
+  document.getElementById('itemsContainer').appendChild(div);
+}
+
+function getItems() {
+  return [...document.querySelectorAll('#itemsContainer .item-row')].map(row => ({
+    description: row.querySelector('.item-desc').value,
+    qty: row.querySelector('.item-qty').value,
+    unit: row.querySelector('.item-unit').value,
+    unit_price: row.querySelector('.item-price').value,
+  }));
+}
+
+function recalcTotals() {
+  const ex = parseFloat(document.getElementById('fAmtEx').value) || 0;
+  const vat = Math.round(ex * 0.07 * 100) / 100;
+  document.getElementById('fVAT').value = vat.toFixed(2);
+  document.getElementById('fTotal').value = (ex + vat).toFixed(2);
+  document.getElementById('totalDisplay').textContent = '฿ ' + (ex+vat).toLocaleString('th-TH',{minimumFractionDigits:2});
+}
+
+/* ── Claude API ── */
+async function callClaude(messages, system) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ model:'claude-sonnet-4-20250514', max_tokens:1000, system, messages })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content.map(b=>b.text||'').join('');
+}
+
+function setBtn(id, loading, label) {
+  const b = document.getElementById(id);
+  b.classList.toggle('loading', loading);
+  b.innerHTML = loading ? '<div class="spinner"></div> กำลังวิเคราะห์…' : label;
+}
+
+/* ── RECEIPT ── */
+async function runReceipt() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) { showToast('กรุณาอัปโหลดรูปใบเสร็จ','error'); return; }
+  setBtn('btnReceipt', true, '🔍 วิเคราะห์ใบเสร็จ');
+  document.getElementById('aiResultCard').style.display = 'block';
+  document.getElementById('aiResultText').textContent = 'กำลังอ่านใบเสร็จ…';
+  document.getElementById('parsedForm').style.display = 'none';
+
+  try {
+    const b64 = await imageToBase64(file);
+    const boqHint = document.getElementById('boqHint').value;
+    const system = `คุณเป็นผู้ช่วยงานก่อสร้างเชี่ยวชาญอ่านใบเสร็จ/ใบกำกับภาษี ตอบเป็นภาษาไทย
+สกัดข้อมูลทั้งหมด: เลขที่ใบกำกับ, วันที่, ชื่อร้าน, ที่อยู่ร้าน, ชื่อลูกค้า, รายการสินค้าทุกบรรทัด (รายการ+จำนวน+หน่วย+ราคาต่อหน่วย), ยอดก่อน VAT, VAT 7%, ยอดรวม
+จัดหมวด BOQ ${boqHint ? '(แนะนำ: '+boqHint+')' : ''}
+
+ท้ายสุดต้องมี JSON block นี้เสมอ (ห้ามละเว้น):
+###JSON###
+{
+  "invoice_no": "",
+  "bill_date": "dd/MM/yyyy",
+  "vendor": "",
+  "vendor_address": "",
+  "customer": "",
+  "items_detail": [
+    {"description":"","qty":"","unit":"","unit_price":""}
+  ],
+  "amount_ex_vat": 0,
+  "vat": 0,
+  "amount_total": 0,
+  "boq_category": "",
+  "note": ""
+}
+###END###`;
+
+    const result = await callClaude([{
+      role:'user',
+      content:[
+        {type:'image', source:{type:'base64', media_type:file.type, data:b64}},
+        {type:'text', text:'กรุณาวิเคราะห์ใบเสร็จ/ใบกำกับภาษีนี้'}
+      ]
+    }], system);
+
+    const jsonMatch = result.match(/###JSON###\s*([\s\S]*?)\s*###END###/);
+    const display = result.replace(/###JSON###[\s\S]*?###END###/g,'').trim();
+    document.getElementById('aiResultText').textContent = display;
+
+    if (jsonMatch) {
+      try {
+        const d = JSON.parse(jsonMatch[1].trim());
+        populateForm(d);
+        document.getElementById('parsedForm').style.display = 'block';
+      } catch(je) { showToast('⚠️ แยก JSON ไม่ได้ กรอกเองได้เลยครับ',''); }
+    }
+  } catch(e) {
+    document.getElementById('aiResultText').textContent = '❌ ' + e.message;
+  }
+  setBtn('btnReceipt', false, '🔍 วิเคราะห์ใบเสร็จ');
+}
+
+function populateForm(d) {
+  document.getElementById('fInvoiceNo').value = d.invoice_no || '';
+  document.getElementById('fDate').value = d.bill_date || '';
+  document.getElementById('fVendor').value = d.vendor || '';
+  document.getElementById('fVendorAddr').value = d.vendor_address || '';
+  document.getElementById('fCustomer').value = d.customer || '';
+  document.getElementById('fBOQ').value = d.boq_category || '';
+  document.getElementById('fNote').value = d.note || '';
+  document.getElementById('fAmtEx').value = d.amount_ex_vat || '';
+  document.getElementById('fVAT').value = d.vat || '';
+  document.getElementById('totalDisplay').textContent = '฿ ' + (parseFloat(d.amount_total)||0).toLocaleString('th-TH',{minimumFractionDigits:2});
+
+  // Items
+  document.getElementById('itemsContainer').innerHTML = '';
+  itemCount = 0;
+  const items = d.items_detail && d.items_detail.length ? d.items_detail : [{description:d.items||'',qty:'',unit:'',unit_price:''}];
+  items.forEach(it => addItemRow(it.description||'', it.qty||'', it.unit||'', it.unit_price||''));
+}
+
+/* ── Save to Sheet (GET method — แก้ปัญหา CORS) ── */
+async function saveToSheet() {
+  if (!scriptUrl) { openSetupModal(); return; }
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true; btn.innerHTML = '<div class="spinner"></div> กำลังบันทึก…';
+
+  const itemsList = getItems();
+  const payload = {
+    invoice_no:     document.getElementById('fInvoiceNo').value,
+    bill_date:      document.getElementById('fDate').value,
+    vendor:         document.getElementById('fVendor').value,
+    vendor_address: document.getElementById('fVendorAddr').value,
+    customer:       document.getElementById('fCustomer').value,
+    items_detail:   itemsList,
+    items:          itemsList.map(i=>i.description).filter(Boolean).join(', '),
+    amount_ex_vat:  parseFloat(document.getElementById('fAmtEx').value) || 0,
+    vat:            parseFloat(document.getElementById('fVAT').value) || 0,
+    amount_total:   parseFloat(document.getElementById('totalDisplay').textContent.replace(/[฿,\s]/g,'')) || 0,
+    boq_category:   document.getElementById('fBOQ').value,
+    note:           document.getElementById('fNote').value,
+  };
+
+  try {
+    // ส่งผ่าน GET + encodeURIComponent เพื่อหลีกเลี่ยง CORS
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    const url = scriptUrl + '?data=' + encoded;
+
+    const res = await fetch(url, { method: 'GET' });
+    const result = await res.json();
+
+    if (result.status === 'ok') {
+      showToast('✅ ' + result.message, 'success');
+      document.getElementById('parsedForm').style.display = 'none';
+      document.getElementById('aiResultCard').style.display = 'none';
+      document.getElementById('preview1').style.display = 'none';
+      document.getElementById('fileInput').value = '';
+    } else {
+      showToast('❌ ' + (result.message || 'บันทึกไม่สำเร็จ'), 'error');
+    }
+  } catch(e) {
+    showToast('❌ เชื่อมต่อไม่ได้: ' + e.message, 'error');
+  }
+  btn.disabled = false; btn.innerHTML = '💾 บันทึก';
+}
+
+/* ── Other modules ── */
+async function runPO() {
+  const text = document.getElementById('lineText').value.trim();
+  if (!text) { showToast('กรุณากรอกข้อความ','error'); return; }
+  setBtn('btnPO', true, '📄 ร่างใบ PO');
+  document.getElementById('resultPO').style.display = 'block';
+  document.getElementById('poText').textContent = 'กำลังร่าง…';
+  try {
+    const bt = document.getElementById('budgetTotal').value, bu = document.getElementById('budgetUsed').value;
+    const sys = `ผู้ช่วยจัดซื้องานก่อสร้าง ตอบภาษาไทย ร่าง PO จากข้อความ ${bt&&bu?`งบ ${Number(bt).toLocaleString()} บาท ใช้ไป ${Number(bu).toLocaleString()} บาท คงเหลือ ${(Number(bt)-Number(bu)).toLocaleString()} บาท`:''}`;
+    document.getElementById('poText').textContent = await callClaude([{role:'user',content:text}], sys);
+  } catch(e) { document.getElementById('poText').textContent = '❌ '+e.message; }
+  setBtn('btnPO', false, '📄 ร่างใบ PO');
+}
+async function runLabor() {
+  const text = document.getElementById('laborText').value.trim();
+  if (!text) { showToast('กรุณากรอกข้อมูล','error'); return; }
+  setBtn('btnLabor', true, '📊 สรุปค่าแรง');
+  document.getElementById('resultLabor').style.display = 'block';
+  document.getElementById('laborResult').textContent = 'กำลังสรุป…';
+  try {
+    const w = document.getElementById('wageRate').value, p = document.getElementById('laborPeriod').value;
+    const sys = `HR งานก่อสร้าง ตอบภาษาไทย สรุปวันทำงานแยกรายคน ${w?'อัตรา '+w+' บาท/วัน':''} ${p?'ช่วง '+p:''} แสดงตาราง ชื่อ|วันมา|ขาด|ค่าแรง และยอดรวม`;
+    document.getElementById('laborResult').textContent = await callClaude([{role:'user',content:text}], sys);
+  } catch(e) { document.getElementById('laborResult').textContent = '❌ '+e.message; }
+  setBtn('btnLabor', false, '📊 สรุปค่าแรง');
+}
+async function runMaterial() {
+  const note = document.getElementById('materialNote').value.trim();
+  if (!note) { showToast('กรุณากรอกข้อมูล','error'); return; }
+  setBtn('btnMaterial', true, '🔍 วิเคราะห์วัสดุ');
+  document.getElementById('resultMaterial').style.display = 'block';
+  document.getElementById('materialResult').textContent = 'กำลังวิเคราะห์…';
+  try {
+    document.getElementById('materialResult').textContent = await callClaude([{role:'user',content:note}], `วิศวกรประมาณราคาก่อสร้าง ตอบภาษาไทย จัดทำ Material List เพื่อ Material Approval ระบุชื่อวัสดุ สเปก หน่วย ปริมาณ`);
+  } catch(e) { document.getElementById('materialResult').textContent = '❌ '+e.message; }
+  setBtn('btnMaterial', false, '🔍 วิเคราะห์วัสดุ');
+}
+async function runBilling() {
+  const text = document.getElementById('billingText').value.trim();
+  if (!text) { showToast('กรุณากรอกข้อมูล','error'); return; }
+  setBtn('btnBilling', true, '💰 ตรวจสอบยอดเงิน');
+  document.getElementById('resultBilling').style.display = 'block';
+  document.getElementById('billingResult').textContent = 'กำลังตรวจสอบ…';
+  try {
+    const r = document.getElementById('retentionRate').value||5, w = document.getElementById('whtRate').value||3;
+    const c = document.getElementById('contractValue').value, p = document.getElementById('progressClaim').value;
+    const sys = `การเงินงานก่อสร้าง ตอบภาษาไทย Retention ${r}% WHT ${w}% ${c?'สัญญา '+Number(c).toLocaleString()+' บาท':''} ${p?'ผลงาน '+p+'%':''} สรุปยอดเรียกเก็บ หัก Retention หัก WHT ยอดจ่ายสุทธิ`;
+    document.getElementById('billingResult').textContent = await callClaude([{role:'user',content:text}], sys);
+  } catch(e) { document.getElementById('billingResult').textContent = '❌ '+e.message; }
+  setBtn('btnBilling', false, '💰 ตรวจสอบยอดเงิน');
+}
+async function runAlien() {
+  const text = document.getElementById('alienText').value.trim();
+  if (!text) { showToast('กรุณากรอกข้อมูล','error'); return; }
+  setBtn('btnAlien', true, '🔔 ตรวจสอบ');
+  document.getElementById('resultAlien').style.display = 'block';
+  document.getElementById('alienResult').textContent = 'กำลังตรวจสอบ…';
+  try {
+    const today = new Date().toLocaleDateString('th-TH',{year:'numeric',month:'long',day:'numeric'});
+    const sys = `HR งานก่อสร้าง ตอบภาษาไทย วันนี้ ${today} จัดกลุ่ม 🔴URGENT(0-30วัน) 🟡WARNING(31-60วัน) 🟢OK(60+วัน) แสดงตาราง ชื่อ|สัญชาติ|ประเภท|วันหมดอายุ|เหลือกี่วัน|สถานะ`;
+    document.getElementById('alienResult').textContent = await callClaude([{role:'user',content:text}], sys);
+  } catch(e) { document.getElementById('alienResult').textContent = '❌ '+e.message; }
+  setBtn('btnAlien', false, '🔔 ตรวจสอบวันหมดอายุ');
+}
+
+function copyResult(id) { navigator.clipboard.writeText(document.getElementById(id).textContent).then(()=>showToast('✅ คัดลอกแล้ว','success')); }
+
+let toastTimer;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast show'+(type?' '+type:'');
+  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
